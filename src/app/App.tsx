@@ -88,6 +88,7 @@ export default function App() {
               }
               editingTransaction={editingTransaction}
               onCancelEdit={() => setEditingTransaction(null)}
+              onAddIncome={addTransaction}
             />
           </div>
         </div>

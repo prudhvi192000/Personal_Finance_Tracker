@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Transaction } from '../types';
 import { format } from 'date-fns';
-import { X } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
+import { TimeCardCalculator } from './TimeCardCalculator';
 
 interface TransactionFormProps {
   onSubmit: (transaction: Omit<Transaction, 'id'>) => void;
   editingTransaction: Transaction | null;
   onCancelEdit: () => void;
+  onAddIncome?: (transaction: Omit<Transaction, 'id'>) => void;
 }
 
-export function TransactionForm({ onSubmit, editingTransaction, onCancelEdit }: TransactionFormProps) {
+export function TransactionForm({ onSubmit, editingTransaction, onCancelEdit, onAddIncome }: TransactionFormProps) {
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [showTimeCard, setShowTimeCard] = useState(false);
 
   useEffect(() => {
     if (editingTransaction) {
@@ -104,6 +107,20 @@ export function TransactionForm({ onSubmit, editingTransaction, onCancelEdit }: 
           </div>
         </div>
 
+        {type === 'income' && !editingTransaction && (
+          <button
+            type="button"
+            onClick={() => setShowTimeCard(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 border-dashed border-emerald-400 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 transition"
+            data-testid="open-timecard-btn"
+          >
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              Time Card Pay Calculator
+            </span>
+          </button>
+        )}
+
         <div>
           <label className="block text-sm mb-2 text-gray-700">Amount ($)</label>
           <input
@@ -180,6 +197,18 @@ export function TransactionForm({ onSubmit, editingTransaction, onCancelEdit }: 
           )}
         </div>
       </form>
+
+      <TimeCardCalculator
+        isOpen={showTimeCard}
+        onClose={() => setShowTimeCard(false)}
+        onAddIncome={(tx) => {
+          if (onAddIncome) {
+            onAddIncome(tx);
+          } else {
+            onSubmit(tx);
+          }
+        }}
+      />
     </div>
   );
 }
