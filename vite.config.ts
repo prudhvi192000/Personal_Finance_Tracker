@@ -24,6 +24,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    strictPort: true,
+    // Allow all hosts (needed for cloud preview URLs)
+    allowedHosts: true,
+    hmr: {
+      // Use wss on the public preview URL so HMR works through the proxy
+      clientPort: 443,
+      protocol: 'wss',
+    },
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory
