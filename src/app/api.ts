@@ -1,6 +1,7 @@
 import { Transaction } from './types';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL as string;
+const BACKEND_URL = "http://localhost:8000";
+console.log("BACKEND_URL:", BACKEND_URL);
 const API = `${BACKEND_URL}/api`;
 
 async function handle<T>(resp: Response): Promise<T> {
