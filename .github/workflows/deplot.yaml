@@ -1,0 +1,68 @@
+name: Deploy Financial Tracker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # ---- Backend Setup ----
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+
+    # ---- Frontend Build ----
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Build React App
+      run: |
+        cd frontend
+        npm install
+        npm run build
+
+    # ---- Deploy to EC2 ----
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          cd /home/ubuntu/app || git clone https://github.com/your-repo.git app
+          cd app
+          git pull origin main
+
+          # Backend setup
+          cd backend
+          pip3 install -r requirements.txt
+
+          # Restart Flask app
+          pm2 delete flask-app || true
+          pm2 start server.py --name flask-app
+
+          # Frontend setup
+          cd ../frontend
+          npm install
+          npm run build
+
+          # Move build to nginx
+          sudo rm -rf /var/www/html/*
+          sudo cp -r build/* /var/www/html/
+
+          sudo systemctl restart nginx
