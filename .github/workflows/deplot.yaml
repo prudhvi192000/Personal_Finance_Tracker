@@ -36,33 +36,83 @@ jobs:
         npm install
         npm run build
 
-    # ---- Deploy to EC2 ----
+    # ---- Deploy to EC2 (Amazon Linux) ----
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
+        username: ec2-user
         key: ${{ secrets.EC2_KEY }}
         script: |
-          cd /home/ubuntu/app || git clone https://github.com/your-repo.git app
+          # Clone repo if not exists
+          cd /home/ec2-user || exit
+          if [ ! -d "app" ]; then
+            git clone https://github.com/your-repo.git app
+          fi
+
           cd app
           git pull origin main
 
+          # ------------------------
+          # Install dependencies (only first time safe)
+          # ------------------------
+          sudo yum update -y
+
+          # Install Python if missing
+          if ! command -v python3 &> /dev/null
+          then
+              sudo yum install python3 -y
+          fi
+
+          # Install Node if missing
+          if ! command -v node &> /dev/null
+          then
+              curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+              sudo yum install -y nodejs
+          fi
+
+          # Install PM2 if missing
+          if ! command -v pm2 &> /dev/null
+          then
+              sudo npm install -g pm2
+          fi
+
+          # Install Nginx if missing
+          if ! command -v nginx &> /dev/null
+          then
+              sudo amazon-linux-extras install nginx1 -y
+              sudo systemctl enable nginx
+              sudo systemctl start nginx
+          fi
+
+          # ------------------------
           # Backend setup
+          # ------------------------
           cd backend
-          pip3 install -r requirements.txt
 
-          # Restart Flask app
+          # Virtual environment (optional but recommended)
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+          # Restart backend
           pm2 delete flask-app || true
-          pm2 start server.py --name flask-app
+          pm2 start server.py --name flask-app --interpreter python3
+          pm2 save
 
+          # ------------------------
           # Frontend setup
+          # ------------------------
           cd ../frontend
           npm install
           npm run build
 
-          # Move build to nginx
-          sudo rm -rf /var/www/html/*
-          sudo cp -r build/* /var/www/html/
+          # Deploy frontend
+          sudo rm -rf /usr/share/nginx/html/*
+          sudo cp -r build/* /usr/share/nginx/html/
 
+          # Restart Nginx
           sudo systemctl restart nginx
