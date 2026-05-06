@@ -1,6 +1,6 @@
 import { Transaction } from './types';
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = "http://ec2-100-31-62-180.compute-1.amazonaws.com/api";
 console.log("BACKEND_URL:", BACKEND_URL);
 const API = `${BACKEND_URL}/api`;
 
